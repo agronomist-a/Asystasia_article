@@ -1,0 +1,1564 @@
+---
+title: "Asystasia_experimentos"
+author: "A. Rodr√≠guez Cort√©s"
+date: "15/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Dormancia
+Se establecieron tratamientos que probablemente romper√°n la latencia de las semillas. Los cuales fueron:
+
+T1 = KNO3 (5%) durante 12 horas aproximadamente, 
+
+T2 = 40∫C 1 hora, 
+
+T3 = 40∫C 2 horas, 
+
+T4 = 4∫C 4 horas + 30∫C 4 horas
+
+T5 = 4∫C 8 horas + 30 ∫C 16 horas
+
+T6 = 40 ∫C y 60∫C por 1 minuto
+
+Cabe destacar que el tratamiento 6 fue un error experimental, las semillas se calentaron demasiado, pero se sigui√≥ con el nuevo tratamiento para ver que ocurr√≠a. 
+
+El experimento inici√≥ el 16 de noviembre y la siembra se llev√≥ a cabo el 17 de noviembre del 2020 por la naturaleza de los tratamientos. Se utilizaron 3 unidades experimentales por tratamiento. Una unidad experimental consist√≠a en una caja petri con 15 semillas, sin embargo se adicionaron 5 semillas m√°s y fueron distribuidas en 3 platos petri, por lo que por caja petri hab√≠a entre 16 y 17 semillas. Cada tratamiento ten√≠a 50 semillas. 
+```{r Prueba dormancia Asystasia gangetica}
+library(pacman)
+p_load(tidyverse,readr,readxl)
+
+#Importar datos
+ruta_1 <- "C:\\Users\\Lenovo\\OneDrive - Universidad de Costa Rica\\1. Curso_InvestigaciÛn\\Dormancia\\RAW_DATA\\prueba_dormancia.csv"
+data_base_dor <- read.csv(ruta_1, sep = ",")
+data_base_dor$Tratamiento <- as.factor(data_base_dor$Tratamiento)
+data_base_dor$DDS <- as.numeric(data_base_dor$DDS)
+
+library(tidyverse)
+
+
+#Acumulado semanal, creado a partir de los datos crudos
+
+T1_dor <- c(0, 0, 2, 2, 14, 15, 18, 27, 27)
+T2_dor <- c(0, 4, 11, 24, 30, 30, 30, 43, 43)
+T3_dor <- c(0, 1, 5, 21, 25, 25, 25, 37, 37)
+T4_dor <- c(0, 1, 7, 20, 20, 23, 23, 35, 35)
+T5_dor <- c(0, 8, 14, 25, 27, 30, 34, 34, 34)
+T6_dor <- c(0, 3, 23, 28, 31, 35, 37, 38, 38) # TRATAMIENTO ERRONEO
+DDS <- c(0, 1, 2, 3, 6, 7, 8 , 9, 10)
+Tratamiento <- rep(c("T1", "T2", "T3", "T4", "T5", "T6"), each = 9)
+Acumulado_diario <- c(T1_dor, T2_dor, T3_dor, T4_dor, T5_dor, T6_dor)
+Acumulado_diario <- cbind(Tratamiento, DDS, Acumulado_diario)
+
+colnames(Acumulado_diario) <- c("Tratamiento", "DDS", "Semillas_germinadas")
+Acumulado_diario <- as.data.frame(Acumulado_diario)
+Acumulado_diario$Tratamiento <- as.factor(Acumulado_diario$Tratamiento)
+Acumulado_diario$DDS <- as.numeric(Acumulado_diario$DDS)
+Acumulado_diario$Semillas_germinadas <- as.numeric(Acumulado_diario$Semillas_germinadas)
+(Acumulado_diario$Semillas_germinadas/50)*100
+            
+#Union de los datos en una lista
+
+Raw_set_data <- list(Acumulado_diario, data_base_dor)
+
+levels(Acumulado_diario$Tratamiento) <-  c("KNO3 (5 %) durante 12 horas", "40 ∫C durante 1 hora", "40 ∫C durante 2 horas", "4 ∫C durante 4 horas + 30 ∫C durante 4 horas ", "4 ∫C durante 8 horas + 30 ∫C durante 16 horas","40 ∫C y 60 ∫C durante 1 minuto")
+
+#Grafico de porcentaje de semillas germinadas
+plot_0 <- ggplot(data = Acumulado_diario, (aes(x = DDS, y = Semillas_germinadas/50*100)))+
+  geom_line(aes(color = Tratamiento, linetype = Tratamiento))+
+  geom_point(stat = "identity", aes(color=Tratamiento))+
+  facet_wrap(~ Tratamiento )+
+    scale_x_continuous(limits = c(0,10), 
+      breaks = c(seq(0,10,1)))+
+      scale_y_continuous(limits = c(0,100),
+        breaks = c(seq(0,100,20))) +
+              labs(title = "Ac˙mulo de semillas germinadas por semana seg√∫n el tratamiento (n=50)", 
+                   y = "Semillas germinadas (%)",
+                   caption = "Prueba de dormancia")+
+
+              theme_bw() +
+                  theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+                  axis.line = element_line(color = "black"),
+                  legend.position = "none", 
+                  plot.title = element_text(hjust = 0.5, size = 11.5),
+                  axis.title.y = element_text(size = 12),
+                  axis.title.x = element_text(size = 12), 
+                  strip.text.x  = element_text(size = 12),
+                  strip.background = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.grid.major = element_blank(),
+                  text = element_text(size = 14))
+
+#Nuevo set de datos para la germinacion por tratamientos
+  Germinacion_final <- data_base_dor %>% 
+    group_by(Tratamiento, DDS) %>% 
+    summarise(porcen_germinacion = sum(Semillas.germinadas)/50*100)
+  resumen_dor_2 = data_base_dor %>% 
+    group_by(Tratamiento, DDS) %>% 
+    summarise(porcen_germinacion = sum(Semillas.germinadas)/50*100)
+
+    levels(resumen_dor_2$Tratamiento) <-  c("KNO3 (5 %) durante 12 horas", 
+                                                        "40 ∫C durante 1 hora", 
+                                                        "40 ∫C durante 2 horas", 
+                                                        "4 ∫C durante 4 horas + 30 ∫C durante 4 horas ", 
+                                                        "4 ∫C durante 8 horas + 30 ∫C durante 16 horas",
+                                                        "40 ∫C y 60 ∫C durante 1 minuto")
+#Seleccion de porcentaje a los 10 DDS
+a <- resumen_dor_2[8, 1:3]
+b <- resumen_dor_2[16, 1:3]
+c <- resumen_dor_2[24, 1:3]
+d <- resumen_dor_2[32, 1:3]
+e <- resumen_dor_2[40, 1:3]
+f <- resumen_dor_2[48, 1:3]
+    
+Porcentaje_germinacion <- rbind(a,b,c,d,e,f)
+
+#Grafico de germinacion semana final
+plot_2 <-  ggplot(Porcentaje_germinacion, (aes(x = Tratamiento, y = porcen_germinacion, fill = Tratamiento)))+
+                  geom_segment(aes(xend = Tratamiento, yend = 0))+
+                  geom_point(size = 4, color = "darkred")+
+                  coord_flip()+
+                   
+               scale_y_continuous(limits = c(0,100),
+                                  breaks = c(seq(0,100,20))) +
+              
+              labs(title = "Porcentaje de germinaci√≥n absoluta a los 10 DDS seg√∫n el tratamiento (n=50)", 
+                   y = "Semillas germinadas (%)",
+                   caption = "Prueba de dormancia")+
+          
+          geom_text(aes(label=porcen_germinacion, vjust= 0.5, hjust = -1.2))+
+              
+              
+             theme_bw() +
+               theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+              legend.position = "none", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+```
+
+
+## Experimento_profundidad en rizotrones
+Se utilizaron 5 rhizotrones y marcas en el vidrio para indicar la colocaciÛn de las semillas. Los tratamientos utilizados fueron diferentes profundidades (cm): 2cm , 5cm, 10cm, 20cm y 30 cm, utilizando 15 semillas por tratamiento por lo que en total se utilizaron 375 semillas en cada experimento y 75 semillas por tratamiento. Las semillas fueron tratadas con calor a 40√∞C durante 1 hora.
+Hubo un error y se utilizaron 4 rizotrones por lo que por tratamiento hay 60 semillas
+
+Se realiz√≥ el mismo experimento en 2 ocasiones con las mismas condiciones.  
+```{r Rizotrones}
+ruta_2 <- "C:\\Users\\Lenovo\\OneDrive - Universidad de Costa Rica\\1. Curso_InvestigaciÛn\\Rizotron\\1\\data\\Rizotron_experimento_1.xlsx"
+
+library(tidyverse)
+library(readxl)
+  
+data_base_rizo_1 <- lapply(excel_sheets(ruta_2), read_excel, path=ruta_2)
+
+
+data_base_rizo_1_emerg <- data_base_rizo_1[[1]]
+
+data_base_rizo_1_pesos <- data_base_rizo_1[[2]]
+
+
+data_base_rizo_emerg_agrup <- data_base_rizo_1_emerg %>% 
+  group_by(Profundidad,Semana) %>% 
+  summarise(porcentaje_emergencia = round(sum(`Plantas emergidas`)/60*100),0,
+    sumatoria = sum(`Plantas emergidas`),
+            emergencia_planta = mean_se(`Plantas emergidas`))
+
+#Renombrar niveles
+data_base_rizo_emerg_agrup$Profundidad <- as.factor(data_base_rizo_emerg_agrup$Profundidad)
+  levels(data_base_rizo_emerg_agrup$Profundidad) <-  c("2 cm", "5 cm", "10 cm", "20 cm ", "30 cm")
+ 
+plot_3 <- ggplot(data_base_rizo_emerg_agrup, (aes(x = Semana, y = porcentaje_emergencia)))+
+                   geom_line(aes(color = Profundidad, linetype = Profundidad))+
+                     geom_point(stat= "identity", aes(color=Profundidad))+
+                      scale_x_continuous(limits = c(0,6), 
+                                breaks = c(seq(0,6,1)))+
+             
+                     scale_y_continuous(limits = c(0,100),
+                                  breaks = c(seq(0,100,20))) +
+              labs(title = "Ac˙mulo de semillas emergidas por semana seg√∫n la profundidad de siembra (n=60)", 
+                   y = "Semillas germinadas (%)", 
+                   caption = "Prueba profundidad 1")+
+          
+             theme_bw() +
+              theme(axis.text.x = element_text(colour = "black"),
+              axis.text.y = element_text(colour = "black"),
+              axis.line = element_line(color = "black"),
+              legend.position = "bottom", 
+              plot.title = element_text(hjust = 0.5, size = 11.5),
+              axis.title.y = element_text(size = 12),
+              axis.title.x = element_text(size = 12), 
+              strip.text.x  = element_text(size = 12),
+              strip.background = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank(),
+              text = element_text(size = 14))
+
+# Porcentaje de emergencia a la semana 6
+a1 <- data_base_rizo_emerg_agrup[7, 1:3]
+b2 <- data_base_rizo_emerg_agrup[14, 1:3]
+c3 <- data_base_rizo_emerg_agrup[21, 1:3]
+d4 <- data_base_rizo_emerg_agrup[28, 1:3]
+e5 <- data_base_rizo_emerg_agrup[35, 1:3]
+
+porcentaje_emergencia_rizo1 <- rbind(a1,b2, c3, d4, e5)
+
+plot_4 <-  ggplot(porcentaje_emergencia_rizo1, (aes(x = Profundidad, y = porcentaje_emergencia)))+
+                  geom_segment(aes(xend = Profundidad, yend = 0))+
+                  geom_point(size = 4, color = "darkred")+
+                  
+               scale_y_continuous(limits = c(0,100),
+                                  breaks = c(seq(0,100,20))) +
+              
+              labs(title = "Porcentaje de emergencia absoluta a las 6 semanas en diferentes profundidades (n=60)", 
+                   y = "Semillas emergidas (%)",
+                   caption = "Prueba de profundidad 1")+
+                   geom_text(aes(label=porcentaje_emergencia, vjust= 0.5, hjust = -1.2))+
+  
+             theme_bw() +
+             theme(axis.text.x = element_text(colour = "black"),
+              axis.text.y = element_text(colour = "black"),
+              axis.line = element_line(color = "black"),
+              legend.position = "none", 
+              plot.title = element_text(hjust = 0.5, size = 11.5),
+              axis.title.y = element_text(size = 12),
+              axis.title.x = element_text(size = 12), 
+              strip.text.x  = element_text(size = 12),
+              strip.background = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank(),
+              text = element_text(size = 14))
+
+data_base_rizo_peso_agrup <- data_base_rizo_1_pesos %>% 
+  group_by(Profundidad) %>% 
+  summarise(Peso_freso_promedio = mean_se(`Peso fresco (g)`),
+            Peso_seco_promedio = mean_se(`Peso seco (g)`))
+
+data_base_rizo_peso_agrup$Profundidad <- as.factor(data_base_rizo_peso_agrup$Profundidad)
+
+
+plot_6 <- ggplot(data = data_base_rizo_peso_agrup, (aes(x = Profundidad, y = data_base_rizo_peso_agrup$Peso_freso_promedio$y)))+
+  geom_bar(stat = "identity", aes(x = Profundidad, y = data_base_rizo_peso_agrup$Peso_freso_promedio$y, 
+                                  fill= Profundidad), color = "black") +
+  geom_errorbar(data = data_base_rizo_peso_agrup, aes(ymin = data_base_rizo_peso_agrup$Peso_freso_promedio$ymin, 
+                                                      ymax = data_base_rizo_peso_agrup$Peso_freso_promedio$ymax),
+                                                      width = 0.1, position = position_dodge(0.9)) +
+
+labs(title = "Peso fresco promedio seg√∫n la profundidad de siembra (n=4)", 
+     x = "Profundidad (cm)", 
+     y = "Peso fresco (g)", 
+     caption = "Prueba profundidad 1") +
+  
+  
+  theme_bw() +
+   theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+                  axis.line = element_line(color = "black"),
+                  legend.position = "none", 
+                  plot.title = element_text(hjust = 0.5, size = 11.5),
+                  axis.title.y = element_text(size = 12),
+                  axis.title.x = element_text(size = 12), 
+                  strip.text.x  = element_text(size = 12),
+                  strip.background = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.grid.major = element_blank(),
+                  text = element_text(size = 14))
+
+plot_7 <- ggplot(data = data_base_rizo_peso_agrup, (aes(x = Profundidad, y = data_base_rizo_peso_agrup$Peso_seco_promedio$y)))+
+           geom_bar(stat = "identity", aes(x = Profundidad, y = data_base_rizo_peso_agrup$Peso_seco_promedio$y, fill= Profundidad), color = "black") +
+            geom_errorbar(data = data_base_rizo_peso_agrup, aes(ymin = data_base_rizo_peso_agrup$Peso_seco_promedio$ymin, 
+                                                           ymax = data_base_rizo_peso_agrup$Peso_seco_promedio$ymax),
+                                                            width = 0.1, position = position_dodge(0.9)) +
+
+labs(title = "Peso seco promedio seg√∫n la profundidad de siembra (n=4)", x = "Profundidad (cm)", y = "Peso seco (g)", caption = "Prueba profundidad 1") +
+
+    theme_bw() +
+               theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+                  axis.line = element_line(color = "black"),
+                   legend.position = "none", 
+                    plot.title = element_text(hjust = 0.5, size = 11.5),
+                    axis.title.y = element_text(size = 12),
+                    axis.title.x = element_text(size = 12), 
+                    strip.text.x  = element_text(size = 12),
+                    strip.background = element_blank(),
+                    panel.grid.minor = element_blank(),
+                    panel.grid.major = element_blank(),
+                    text = element_text(size = 14))
+
+#Prueba_Rizotron_2
+ruta_3 <- "C:\\Users\\Lenovo\\Documents\\RecopilaciÛn A. gangetica\\Rizotron_experimento_2.xlsx"
+data_base_rizo_2 <- lapply(excel_sheets(ruta_3), read_excel, path=ruta_3)
+  library(tidyverse)
+  library(readxl)
+
+data_base_rizo_2 <- lapply(excel_sheets(ruta_3), read_excel, path=ruta_3)
+
+data_base_rizo_2_emerg <- data_base_rizo_2[[1]]
+
+data_base_rizo_2_pesos <- data_base_rizo_2[[2]]
+
+data_base_rizo_2_longitudes <- data_base_rizo_2[[3]]
+
+data_base_rizo_emerg_agrup_2 <- data_base_rizo_2_emerg %>% 
+  group_by(Profundidad,Semana) %>% 
+  summarise(porcentaje_emergencia = round(sum(`Plantas emergidas`)/60*100),0,
+    sumatoria = sum(`Plantas emergidas`),
+            emergencia_planta = mean_se(`Plantas emergidas`))
+
+data_base_rizo_emerg_agrup_2$Profundidad <- as.factor(data_base_rizo_emerg_agrup_2$Profundidad)
+levels(data_base_rizo_emerg_agrup_2$Profundidad) <-  c("2 cm", "5 cm", "10 cm", "20 cm ", "30 cm")
+
+plot_8 <- ggplot(data_base_rizo_emerg_agrup_2, (aes(x = Semana, y = porcentaje_emergencia)))+
+                   geom_line(aes(color = Profundidad, linetype = Profundidad))+
+                   geom_point(stat= "identity", aes(color=Profundidad))+
+                   scale_x_continuous(limits = c(0,6), 
+                                breaks = c(seq(0,6,1)))+
+             
+               scale_y_continuous(limits = c(0,100),
+                                  breaks = c(seq(0,100,20))) +
+              
+              labs(title = "Ac˙mulo de semillas emergidas por semana seg√∫n la profundidad de siembra (n=60)", 
+                   y = "Semillas emergidas (%)",
+                   caption = "Prueba de profundidad 2 ")+
+          
+             theme_bw() +
+                  theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+                  axis.line = element_line(color = "black"),
+                  legend.position = "bottom", 
+                  plot.title = element_text(hjust = 0.5, size = 11.5),
+                  axis.title.y = element_text(size = 12),
+                  axis.title.x = element_text(size = 12), 
+                  strip.text.x  = element_text(size = 12),
+                  strip.background = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.grid.major = element_blank(),
+                  text = element_text(size = 14))
+
+a2 <- data_base_rizo_emerg_agrup_2[7, 1:3]
+b2 <- data_base_rizo_emerg_agrup_2[14, 1:3]
+c2 <- data_base_rizo_emerg_agrup_2[21, 1:3]
+d2 <- data_base_rizo_emerg_agrup_2[28, 1:3]
+e2 <- data_base_rizo_emerg_agrup_2[35, 1:3]
+
+porcentaje_emergencia_rizo2 <- rbind(a2,b2, c2, d2, e2)
+  
+plot_9 <-  ggplot(porcentaje_emergencia_rizo2, (aes(x = Profundidad, y = porcentaje_emergencia)))+
+            geom_segment(aes(xend = Profundidad, yend = 0))+
+            geom_point(size = 4, color = "darkred")+
+               scale_y_continuous(limits = c(0,100),
+                                  breaks = c(seq(0,100,20))) +
+              
+              labs(title = "Porcentaje de emergencia a las 6 semanas en diferentes profundidades (n=60)", 
+                   y = "Semillas emergidas (%)",
+                   caption = "Prueba de profundidad 2")+
+          
+                geom_text(aes(label=porcentaje_emergencia, vjust= 0.5, hjust = -1.2))+
+              
+        
+             theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "none", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+data_base_rizo_peso_agrup_2 <- data_base_rizo_2_pesos %>% 
+            group_by(Profundidad) %>% 
+            summarise(Peso_freso_promedio = mean_se(`Peso fresco (g)`),
+            Peso_seco_promedio = mean_se(`Peso seco (g)`))
+
+data_base_rizo_peso_agrup_2$Profundidad <- as.factor(data_base_rizo_peso_agrup_2$Profundidad)
+
+
+plot_11 <- ggplot(data = data_base_rizo_peso_agrup_2, (aes(x = Profundidad, y = data_base_rizo_peso_agrup_2$Peso_freso_promedio$y)))+
+  geom_bar(stat = "identity", aes(x = Profundidad, y = data_base_rizo_peso_agrup_2$Peso_freso_promedio$y, 
+                                  fill= Profundidad), color = "black") +
+  geom_errorbar(data = data_base_rizo_peso_agrup_2, aes(ymin = data_base_rizo_peso_agrup_2$Peso_freso_promedio$ymin, 
+                                                      ymax = data_base_rizo_peso_agrup_2$Peso_freso_promedio$ymax),
+                                                      width = 0.1, position = position_dodge(0.9)) +
+
+labs(title = "Peso fresco promedio seg√∫n la profundidad de siembra (n=4)", 
+     x = "Profundidad (cm)", 
+     y = "Peso fresco (g)") +
+ 
+   theme_bw() +
+               
+  theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "none", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+plot_12 <- ggplot(data = data_base_rizo_peso_agrup_2, (aes(x = Profundidad, y = data_base_rizo_peso_agrup_2$Peso_seco_promedio$y)))+
+  geom_bar(stat = "identity", aes(x = Profundidad, y = data_base_rizo_peso_agrup_2$Peso_seco_promedio$y, 
+                                  fill= Profundidad), color = "black") +
+  geom_errorbar(data = data_base_rizo_peso_agrup_2, aes(ymin = data_base_rizo_peso_agrup_2$Peso_seco_promedio$ymin, 
+                                                      ymax = data_base_rizo_peso_agrup_2$Peso_seco_promedio$ymax),
+                                                      width = 0.1, position = position_dodge(0.9)) +
+
+labs(title = "Peso seco promedio seg√∫n la profundidad de siembra (n=4)", 
+     x = "Profundidad (cm)", 
+     y = "Peso seco (g)") +
+  theme_bw() +
+               theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+              legend.position = "none", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+data_base_rizo_2_long<- data_base_rizo_2_longitudes %>% 
+  group_by(Profundidad) %>% 
+  summarise(Longitud_f_promedio = mean_se(`Longitud foliar (cm)`),
+            Longitud_r_promedio = mean_se(`Longitud radical (cm)`))
+
+data_base_rizo_2_longitudes$Profundidad <- as.factor(data_base_rizo_2_longitudes$Profundidad)
+  data_base_rizo_2_longitudes$Rhizotron <- as.factor(data_base_rizo_2_longitudes$Rhizotron)
+  data_base_rizo_2_long$Profundidad <- as.factor(data_base_rizo_2_long$Profundidad)
+ 
+ 
+   plot_13<- ggplot(data = data_base_rizo_2_long, (aes(x = Profundidad, y = data_base_rizo_2_long$Longitud_r_promedio$y)))+
+   geom_bar(stat = "identity", aes(x = Profundidad, y = data_base_rizo_2_long$Longitud_r_promedio$y, 
+                                  fill= Profundidad), color = "black") +
+ 
+      geom_errorbar(data = data_base_rizo_2_long, aes(ymin = data_base_rizo_2_long$Longitud_r_promedio$ymin , ymax = data_base_rizo_2_long$Longitud_r_promedio$ymax), width = 0.1, position = position_dodge(0.9))+
+
+         labs(title="Longitud raÌz promedio (n=60)",
+            y = "Longitud raÌz (cm)",
+            x = "Profundidad (cm)")+
+  
+            theme_bw() +
+            
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+plot_14<- ggplot(data = data_base_rizo_2_long, (aes(x = Profundidad, y = data_base_rizo_2_long$Longitud_f_promedio$y)))+
+  
+  geom_bar(stat = "identity", aes(x = Profundidad, y = data_base_rizo_2_long$Longitud_f_promedio$y, fill= Profundidad), color = "black")+
+  
+  geom_errorbar(data = data_base_rizo_2_long, aes(ymin = data_base_rizo_2_long$Longitud_f_promedio$ymin , ymax = data_base_rizo_2_long$Longitud_f_promedio$ymax), width = 0.1, position = position_dodge(0.9))+
+
+            labs(title="Longitud aÈrea promedio (n=60)",
+            y = "Longitud foliar (cm)", 
+            x = "Profundidad (cm)")+
+            theme_bw() +
+               theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+              legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+   
+
+#Union de los dos experimentos en un solo data_frame
+prof_rizotrones <- rbind(data_base_rizo_1_emerg, data_base_rizo_2_emerg)
+prof_rizotrones$Semana <- as.integer(prof_rizotrones$Semana)
+prof_rizotrones$Profundidad <- as.factor(prof_rizotrones$Profundidad)
+
+
+data_base_rizo_pair_emerg <- prof_rizotrones %>% 
+  group_by(Profundidad,Semana) %>% 
+  summarise(porcentaje_emergencia = round(sum(`Plantas emergidas`)/120*100),0,
+    sumatoria = sum(`Plantas emergidas`),
+            emergencia_planta = mean_se(`Plantas emergidas`))
+
+plot_15 <- ggplot(data_base_rizo_pair_emerg, (aes(x = Semana, y = porcentaje_emergencia)))+
+                   geom_line(aes(color = Profundidad, linetype = Profundidad))+
+                     geom_point(stat= "identity", aes(color=Profundidad))+
+                      scale_x_continuous(limits = c(0,6), 
+                                breaks = c(seq(0,6,1)))+
+             
+                     scale_y_continuous(limits = c(0,100),
+                                  breaks = c(seq(0,100,20))) +
+              labs(title = "Ac˙mulo de semillas emergidas por semana seg√∫n la profundidad de siembra (n=120)", 
+                   y = "Semillas germinadas (%)", 
+                   caption = "Prueba profundidad ambos rizotrones")+
+          
+             theme_bw() +
+              theme(axis.text.x = element_text(colour = "black"),
+              axis.text.y = element_text(colour = "black"),
+              axis.line = element_line(color = "black"),
+              legend.position = "bottom", 
+              plot.title = element_text(hjust = 0.5, size = 11.5),
+              axis.title.y = element_text(size = 12),
+              axis.title.x = element_text(size = 12), 
+              strip.text.x  = element_text(size = 12),
+              strip.background = element_blank(),
+              panel.grid.minor = element_blank(),
+              panel.grid.major = element_blank(),
+              text = element_text(size = 14))
+
+  
+
+
+```
+
+
+## Experimento_profundidad en potes
+```{r Experimento en potes}
+#file.choose()
+ruta_4 <- "C:\\Users\\Lenovo\\OneDrive - Universidad de Costa Rica\\1. Curso_InvestigaciÛn\\Potes_prof\\RAW_DATA\\Evaluaciones_emergencia.xlsx"
+#cargado de librerias
+library(pacman)
+p_load(tidyverse,readr,readxl)
+
+data_set_emerg <- lapply(excel_sheets(ruta_4), read_excel, path = ruta_4)
+
+#Datos por semana emergencia 
+data_semana0_emergencia <- data_set_emerg[[1]] #Semana 0
+data_semana1_emergencia <- data_set_emerg[[2]] #Semana 1
+data_semana2_emergencia <- data_set_emerg[[3]] #Semana 2
+data_semana3_emergencia <- data_set_emerg[[4]] #Semana 3
+data_semana4_emergencia <- data_set_emerg[[5]] #Semana 4
+data_semana5_emergencia <- data_set_emerg[[6]] #Semana 5
+
+ordenar <- function(data){
+  
+  
+  #Seleccion de los elementos del vector seg√∫n el tratamiento
+  T1 <- c(data$'9'[3], data$'5'[2], data$'7'[1],data$'8'[4], data$'5'[5], data$'7'[3], data$'6'[4], data$'7'[5],
+          data$'3'[4], data$'4'[5])
+  
+  T2 <- c(data$'8'[5], data$'1'[1], data$'2'[5], data$'9'[4], data$'2'[2], data$'3'[3],
+          data$'8'[3], data$'7'[4], data$'10'[2], data$'10'[4])
+  
+  T3 <- c(data$'1'[2], data$'2'[3], data$'6'[3], data$'4'[4], data$'1'[3], data$'9'[1], data$'9'[5],
+          data$'6'[5], data$'5'[1], data$'5'[3]) 
+  
+  T4  <- c(data$'10'[1], data$'4'[3], data$'7'[2], data$'1'[4], data$'10'[5], 
+           data$'8'[2], data$'9'[2], data$'4'[1], data$'10'[3], data$'6'[2])
+  
+  T5 <- c(data$'3'[1], data$'4'[2], data$'6'[1], data$'3'[5], data$'8'[1], 
+          data$'1'[5], data$'2'[4], data$'5'[4], data$'2'[1], data$'3'[2])
+  
+  Semana <- c(data$Semana[1:5])
+  
+  #ordenar seg√∫n la r√©plica
+  #Tal vez no sea necesario
+  
+  #Convertir a data frame
+  T1 <- as.data.frame(T1)
+  T2 <- as.data.frame(T2)
+  T3 <- as.data.frame(T3)
+  T4 <- as.data.frame(T4)
+  T5 <- as.data.frame(T5)
+  Semana <- as.data.frame(Semana)
+  
+  df <- cbind(T1, T2, T3, T4, T5, Semana)
+  
+  return(df)
+  #Por si se requiere
+  write_excel_csv(df, "salida.csv")
+}
+
+Sem0_emer<- ordenar(data = data_semana0_emergencia)
+Sem1_emer<-ordenar(data = data_semana1_emergencia)
+Sem2_emer<-ordenar(data = data_semana2_emergencia)
+Sem3_emer<-ordenar(data = data_semana3_emergencia)
+Sem4_emer <- ordenar(data = data_semana4_emergencia)
+Sem5_emer <- ordenar(data = data_semana5_emergencia)
+#funcion para agregar replica
+Replica<-function(data){
+  Replica <- c((1:10))
+  cbind(data, Replica)
+}
+
+Sem0_emer<-Replica(data = Sem0_emer)
+Sem1_emer<-Replica(data = Sem1_emer)  
+Sem2_emer<-Replica(data = Sem2_emer)
+Sem3_emer<-Replica(data = Sem3_emer)  
+Sem4_emer <- Replica(data = Sem4_emer)
+Sem5_emer <- Replica(data = Sem5_emer)
+
+df_emergencia <- rbind(Sem0_emer,Sem1_emer, Sem2_emer, Sem3_emer, Sem4_emer, Sem5_emer)
+
+colnames(df_emergencia) = c("0 cm", "2 cm", "4 cm", "6 cm", "8 cm", "Semana", "R√©plica")
+
+df_emergencia <- pivot_longer(df_emergencia, 
+                       cols = "0 cm":"8 cm",
+                       names_to = "Profundidad",
+                       values_to = "Semillas emergidas", "Replica") 
+
+df_emergencia_resumen<-df_emergencia %>% 
+  group_by(Profundidad, Semana) %>% 
+  summarise(Sumatoria = sum(`Semillas emergidas`),
+            Porcentaje_emergencia = ((Sumatoria/100)*100), 
+            Emergencia_sd = sd(`Semillas emergidas`),
+            Emergencia_max = max(`Semillas emergidas`), 
+            Emergencia_min = min(`Semillas emergidas`), 
+            Emergencia_promedio = mean_se(`Semillas emergidas`))
+            #acum = cumsum(Sumatoria))
+
+#data_frame
+a3 <- c(0, 24, 52, 62, 64, 64)
+b3 <- c(0, 13, 60, 71, 72, 72)
+c3 <- c(0, 0, 1, 17, 18, 18)
+d3 <- c(0, 0, 7, 17,18, 18)
+e3 <- c(0,0,0, 4, 6, 6)
+
+Semana <- c(0, 1, 2, 3, 4, 5)
+Tratamiento <- rep(c("0 cm", "2 cm", "4 cm","6 cm", "8 cm"), each = 6)
+
+Acumulado_semanal <-c(a3, b3, c3, d3, e3) 
+Acumulado_semanal <- as.data.frame(Acumulado_semanal)
+Acumulado_semanal <- cbind(Tratamiento, Semana, Acumulado_semanal)
+colnames(Acumulado_semanal) <- c("Profundidad","Semana","Semillas emergidas")
+Acumulado_semanal$Profundidad <- as.factor(Acumulado_semanal$Profundidad)
+
+
+plot_01<- ggplot(data = Acumulado_semanal, (aes(x = Semana, y = `Semillas emergidas`)))+
+  geom_point(stat = "identity", aes(color = Profundidad)) +
+  geom_line(aes(color= Profundidad, linetype = Profundidad))+
+  scale_x_continuous(limits = c(0,5),
+                breaks = c(seq(0,5,1))) + 
+                  scale_y_continuous(
+                      limits = c(0,100),
+                       breaks = c(seq(0,100,20)))+
+          labs(title="Acumulado de semillas emergidas por semana (n=100)",
+            y = "Semillas emergidas (%)")+
+            theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))  
+
+plot_17 <- df_emergencia %>% 
+  group_by(Profundidad) %>% 
+  summarise(Semillas_emergidas = sum(`Semillas emergidas`),
+            Porcentaje_emergencia = (Semillas_emergidas/100)*100) %>% 
+  
+  ggplot(data = ., (aes(x = Profundidad, y = Semillas_emergidas)))+ 
+  geom_segment(aes(xend = Profundidad, yend = 0))+
+   geom_point(size = 4, color = "darkred")+
+  scale_y_continuous(
+    limits = c(0,100),
+    breaks = c(seq(0,100,25)))+
+   geom_text(aes(label=Semillas_emergidas, vjust= 0.5, hjust = -1.2))+
+  
+  labs(title = "Emergencia acumulado a las 5 semanas", y = "Emergencia (%)")+
+  
+  theme_bw() +
+  
+  theme(axis.text.x = element_text(colour = "black"),
+        axis.text.y = element_text(colour = "black"),
+        axis.line = element_line(color = "black"),
+        legend.position = "bottom", 
+        plot.title = element_text(hjust = 0.5, size = 11.5),
+        axis.title.y = element_text(size = 12),
+        axis.title.x = element_text(size = 12), 
+        strip.text.x  = element_text(size = 12),
+        strip.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        text = element_text(size = 12)) 
+
+#longitudes
+ruta_5 <- "C:\\Users\\Lenovo\\OneDrive - Universidad de Costa Rica\\1. Curso_InvestigaciÛn\\Potes_prof\\RAW_DATA\\Biomasa_pesos - Hoja 1(2).csv"
+ruta_6 <- "C:\\Users\\Lenovo\\OneDrive - Universidad de Costa Rica\\1. Curso_InvestigaciÛn\\Potes_prof\\RAW_DATA\\Longitudes_aÈrea y radicales - Hoja 1(1).csv"
+data_pesos <-read.csv(file = ruta_5, header =TRUE, sep = "," )
+data_longitudes <- read.csv(file = ruta_6, header=TRUE, sep = ",")
+peso_fresco <- data_pesos$Peso.bolsa...plantas.frescas..g.-data_pesos$Peso.bolsa..g.
+peso_fresco <-as.data.frame(peso_fresco)
+peso_seco <- data_pesos$Peso.bolsa...plantas.secas..g.-data_pesos$Peso.bolsa..g.
+peso_seco <- as.data.frame(peso_seco)
+peso_seco_raÌz <- data_pesos$Peso.seco.raiz...bolsa..g.-data_pesos$Peso.bolsa..g.
+peso_seco_raÌz <- as.data.frame(peso_seco_raÌz)
+
+data_pesos<-cbind(data_pesos, peso_fresco, peso_seco, peso_seco_raÌz)
+peso_seco_aereo <- data_pesos$peso_fresco - data_pesos$peso_seco_raÌz
+peso_seco_aereo <- as.data.frame(peso_seco_aereo)
+data_pesos<-cbind(data_pesos, peso_seco_aereo)
+
+colnames(data_pesos) <- c("Profundidad", "R√©plica", "Peso bolsa (g)", "Peso bolsa + plantas frescas (g)", "Peso bolsa + plantas secas (g)", "Peso bolsa + raÌz", "Peso fresco (g)", "Peso seco (g)", "Peso seco raÌz (g)", "Peso seco a√©reo (g)")  
+
+colnames(data_longitudes) <- c("Profundidad", "R√©plica", "Planta", "Longitud radical (cm)", "Longitud aÈrea (cm)")
+
+data_pesos <- na.omit(data_pesos) #borrar filas con valores nulos
+data_longitudes <-na.omit(data_longitudes)
+data_pesos$Profundidad <- as.factor(data_pesos$Profundidad)
+data_pesos$`Peso fresco (g)` <- as.numeric(data_pesos$`Peso fresco (g)`)
+
+#Medidas seg√∫n las plantas emergidas en los potes
+ df_longitudes_resumen<- data_longitudes %>%   
+group_by(Profundidad) %>% 
+summarise(media_aerea = mean(`Longitud aÈrea (cm)`), 
+          media_radical = mean(`Longitud radical (cm)`),
+          desv_aera = sd(`Longitud aÈrea (cm)`), 
+          desv_radical = sd(`Longitud radical (cm)`), 
+          error_aerea = mean_se(`Longitud aÈrea (cm)`),
+          error_radical = mean_se(`Longitud radical (cm)`))
+
+ df_pesos_resumen <- data_pesos%>%   
+   group_by(Profundidad) %>% 
+   summarise(media_pesofresco = mean(`Peso fresco (g)`),
+             media_pesoseco = mean(`Peso seco (g)`),
+             media_pesoseco_raiz = mean(`Peso seco raÌz (g)`),
+             media_pesoseco_aerea = mean(`Peso seco a√©reo (g)`),
+             desvpf = sd(`Peso fresco (g)`),
+             desvs = sd(`Peso seco (g)`),
+             desvpr = sd(`Peso seco raÌz (g)`),
+             desvpa = sd(`Peso seco a√©reo (g)`),
+             error_pf = mean_se(`Peso fresco (g)`), 
+             error_ps = mean_se(`Peso seco (g)`),
+             error_psr = mean_se(`Peso seco raÌz (g)`), 
+             error_psa = mean_se(`Peso seco a√©reo (g)`))
+
+ df_longitudes_resumen$Profundidad <- as.factor(df_longitudes_resumen$Profundidad)
+ 
+  plot_18<- ggplot(data = df_longitudes_resumen, (aes(x = Profundidad, y = error_aerea$y)))+
+  geom_bar(stat = "identity", aes (x = Profundidad, y= error_aerea$y, fill = Profundidad), color = "black")+
+  geom_errorbar(data = df_longitudes_resumen, aes(ymin = error_aerea$ymin , ymax = error_aerea$ymax), width = 0.1, position = position_dodge(0.9))+
+          labs(title="Longitud aÈrea promedio (n=10)",
+            y = "Longitud aÈrea (cm)", 
+            x = "Profundidad (cm)")+
+            theme_bw() +
+               theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+                  axis.line = element_line(color = "black"),
+                 legend.position = "bottom", 
+                 plot.title = element_text(hjust = 0.5, size = 11.5),
+                 axis.title.y = element_text(size = 12),
+                 axis.title.x = element_text(size = 12), 
+                 strip.text.x  = element_text(size = 12),
+                strip.background = element_blank(),
+                panel.grid.minor = element_blank(),
+                panel.grid.major = element_blank(),
+                text = element_text(size = 14))  
+  
+ plot_19<- ggplot(data = df_longitudes_resumen, (aes(x = Profundidad, y = error_radical$y)))+
+  geom_bar(stat = "identity", aes (x = Profundidad, y= error_radical$y, fill = Profundidad), color = "black")+
+  geom_errorbar(data = df_longitudes_resumen, aes(ymin = error_radical$ymin , ymax = error_radical$ymax), width = 0.1, position = position_dodge(0.9))+
+ 
+          labs(title="Longitud radical promedio (n=10)",
+            y = "Longitud de raÌz (cm)", 
+            x= "Profundidad (cm)")+
+    theme_bw() +
+    theme(axis.text.x = element_text(colour = "black"),
+              axis.text.y = element_text(colour = "black"),
+                 axis.line = element_line(color = "black"),
+              legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))  
+  
+ df_pesos_resumen$Profundidad <- as.factor(df_pesos_resumen$Profundidad)
+ 
+ plot_20<- ggplot(data = df_pesos_resumen, (aes(x = Profundidad, y = error_pf$y)))+
+  geom_bar(stat = "identity", aes (x = Profundidad, y= error_pf$y, fill = Profundidad), color = "black")+
+  geom_errorbar(data = df_pesos_resumen, aes(ymin = error_pf$ymin , ymax = error_pf$ymax), width = 0.1, position = position_dodge(0.9))+
+
+          labs(title="Peso fresco promedio (n=10)",
+            y = "Peso fresco (g)",
+            x = "Profundidad (cm)")+
+            theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))  
+
+ 
+ plot_21<- ggplot(data = df_pesos_resumen, (aes(x = Profundidad, y = error_ps$y)))+
+  geom_bar(stat = "identity", aes (x = Profundidad, y= error_ps$y, fill = Profundidad), color = "black")+
+  geom_errorbar(data = df_pesos_resumen, aes(ymin = error_ps$ymin , ymax = error_ps$ymax), width = 0.1, position = position_dodge(0.9))+
+
+          labs(title="Peso seco promedio (n=10)",
+            y = "Peso seco (g)",
+            x = "Profundidad (cm)")+
+            theme_bw() +
+               theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+              legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))  
+ 
+ plot_22 <- ggplot(data = df_pesos_resumen, (aes(x = Profundidad, y = error_psr$y)))+
+  geom_bar(stat = "identity", aes (x = Profundidad, y= error_psr$y, fill = Profundidad), color = "black")+
+  geom_errorbar(data = df_pesos_resumen, aes(ymin = error_psr$ymin , ymax = error_psr$ymax), width = 0.1, position = position_dodge(0.9))+
+
+          labs(title="Peso seco de raÌz promedio (n=10)",
+            y = "Peso seco (g)",
+            x = "Profundidad (cm)")+
+            theme_bw() +
+               theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+              legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+ 
+ plot_23 <- ggplot(data = df_pesos_resumen, (aes(x = Profundidad, y = error_psa$y)))+
+  geom_bar(stat = "identity", aes (x = Profundidad, y= error_psa$y, fill = Profundidad), color = "black")+
+  geom_errorbar(data = df_pesos_resumen, aes(ymin = error_psa$ymin , ymax = error_psa$ymax), width = 0.1, position = position_dodge(0.9))+
+
+          labs(title="Peso seco a√©reo promedio (n=10)",
+            y = "Peso seco a√©reo (g)", 
+            x= "Profundidad (cm)")+
+            theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+                  axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            strip.background = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+  
+
+```
+
+
+## Modelos Gompertz de mejor ajuste
+```{r Modelos Gompertz de mejor ajuste}
+#Para correr los modelos no lineales de esta libreria deben eliminarse los factores del dataframe
+
+library(easynls)
+#Dormancia acumulado diario
+T1 <- Acumulado_diario[Acumulado_diario$Tratamiento == "KNO3 (5 %) durante 12 horas",]
+T2 <- Acumulado_diario[Acumulado_diario$Tratamiento == "40 ∫C durante 1 hora",]
+T3 <- Acumulado_diario[Acumulado_diario$Tratamiento == "40 ∫C durante 2 horas",]
+T4 <- Acumulado_diario[Acumulado_diario$Tratamiento == "4 ∫C durante 4 horas + 30 ∫C durante 4 horas ",]
+T5 <- Acumulado_diario[Acumulado_diario$Tratamiento == "4 ∫C durante 8 horas + 30 ∫C durante 16 horas",]
+T6 <- Acumulado_diario[Acumulado_diario$Tratamiento == "40 ∫C y 60 ∫C durante 1 minuto",]
+
+
+T1$Semillas_germinadas <- T1$Semillas_germinadas/50*100
+T2$Semillas_germinadas <- T2$Semillas_germinadas/50*100
+T3$Semillas_germinadas <- T3$Semillas_germinadas/50*100
+T4$Semillas_germinadas <- T4$Semillas_germinadas/50*100
+T5$Semillas_germinadas <- T5$Semillas_germinadas/50*100
+T6$Semillas_germinadas <- T6$Semillas_germinadas/50*100
+
+T1$Tratamiento <- NULL
+T2$Tratamiento <- NULL
+T3$Tratamiento <- NULL
+T4$Tratamiento <- NULL
+T5$Tratamiento <- NULL
+T6$Tratamiento <- NULL
+
+#	KNO3 (5 %) durante 12 horas
+model_1 = nlsfit(T1, model = 10, start = c(54, 9, 1))
+nlsplot(T1, model = 10, start = c(54,9,1), xlab = "DDS", ylab = "Semillas germinadas")
+
+#40 ∫C durante 1 hora
+model_2 = nlsfit(T2, model = 10, start = c(86, 9, 1))
+nlsplot(T2, model = 10, start = c(86,9,1), xlab = "DDS", ylab = "Semillas germinadas")
+
+#	40 ∫C durante 2 horas
+model_3 = nlsfit(T3, model = 10, start = c(74, 9, 1))
+nlsplot(T3, model = 10, start = c(74,9,1), xlab = "DDS", ylab = "Semillas germinadas")
+
+#4 ∫C durante 4 horas + 30 ∫C durante 4 horas 
+model_4 = nlsfit(T4, model = 10, start = c(70, 9, 1))
+nlsplot(T4, model = 10, start = c(70,9,1), xlab = "DDS", ylab = "Semillas germinadas")
+
+#4 ∫C durante 8 horas + 30 ∫C durante 16 horas
+model_5 = nlsfit(T5, model = 10, start = c(68, 9, 1))
+nlsplot(T5, model = 10, start = c(68,9,1), xlab = "DDS", ylab = "Semillas germinadas")
+
+#40 ∫C y 60 ∫C durante 1 minuto
+model_6 = nlsfit(T6, model = 10, start = c(76, 9, 1))
+nlsplot(T6, model = 10, start = c(76,9,1), xlab = "DDS", ylab = "Semillas germinadas")
+
+#Rhizotrones
+#Estos resultados conciernen a los datos de los 2 experimentos realizados
+
+
+P1 <-data_base_rizo_pair_emerg[data_base_rizo_pair_emerg$Profundidad==2,]
+P2 <- data_base_rizo_pair_emerg[data_base_rizo_pair_emerg$Profundidad==5,] 
+P3 <- data_base_rizo_pair_emerg[data_base_rizo_pair_emerg$Profundidad==10,]
+P4 <- data_base_rizo_pair_emerg[data_base_rizo_pair_emerg$Profundidad==20,]
+P5 <- data_base_rizo_pair_emerg[data_base_rizo_pair_emerg$Profundidad==30,]
+
+P1<- P1[, ! names(P1) %in% c("Profundidad","0", "sumatoria", "emergencia_planta")]
+P2<- P2[, ! names(P2) %in% c("Profundidad","0", "sumatoria", "emergencia_planta")]
+P3<- P3[, ! names(P3) %in% c("Profundidad","0", "sumatoria", "emergencia_planta")]
+P4<- P4[, ! names(P4) %in% c("Profundidad","0", "sumatoria", "emergencia_planta")]
+P5<- P5[, ! names(P5) %in% c("Profundidad","0", "sumatoria", "emergencia_planta")]
+
+P1 <- as.data.frame(P1)
+P2 <- as.data.frame(P2)
+P3 <- as.data.frame(P3)
+P4 <- as.data.frame(P4)
+P5 <- as.data.frame(P5)
+
+
+model_1_rizo = nlsfit(P1, model = 10, start = c(60, 4, 1))
+nlsplot(P1, model = 10, start = c(60,4,1), xlab = "Semana", ylab = "Semillas germinadas")
+
+model_2_rizo = nlsfit(P2, model = 10, start = c(20, 3, 1))
+nlsplot(P2, model = 10, start = c(20,3,1), xlab = "Semana", ylab = "Semillas germinadas")
+
+model_3_rizo = nlsfit(P3, model = 1, start = c(1.6, 4.5, 1))
+nlsplot(P3, model = 1, start = c(2,4,1), xlab = "Semana", ylab = "Semillas germinadas")
+
+###Potes_prueba profundidad
+
+P1_pote <- Acumulado_semanal[Acumulado_semanal$Profundidad == "0 cm", ]
+P2_pote <- Acumulado_semanal[Acumulado_semanal$Profundidad == "2 cm", ]
+P3_pote <- Acumulado_semanal[Acumulado_semanal$Profundidad == "4 cm", ]
+P4_pote <- Acumulado_semanal[Acumulado_semanal$Profundidad == "6 cm", ]
+P5_pote <- Acumulado_semanal[Acumulado_semanal$Profundidad == "8 cm", ]
+
+P1_pote$Profundidad <- NULL
+P2_pote$Profundidad <- NULL
+P3_pote$Profundidad <- NULL
+P4_pote$Profundidad <- NULL
+P5_pote$Profundidad <- NULL
+
+model_1_pote = nlsfit(P1_pote, model = 10, start = c(64, 4, 1))
+nlsplot(P1_pote, model = 10, start = c(64,4,1), xlab = "Semana", ylab = "Semillas emergidas")
+
+model_2_pote = nlsfit(P2_pote, model = 10, start = c(71, 3, 1))
+nlsplot(P2_pote, model = 10, start = c(71,3,1), xlab = "Semana", ylab = "Semillas emergidas")
+
+model_3_pote = nlsfit(P3_pote, model = 10, start = c(17, 3, 1))
+nlsplot(P3_pote, model = 10, start = c(17,3,1), xlab = "Semana", ylab = "Semillas emergidas")
+
+model_4_pote = nlsfit(P4_pote, model = 10, start = c(17, 3, 1))
+nlsplot(P3_pote, model = 10, start = c(17,3,1), xlab = "Semana", ylab = "Semillas emergidas")
+
+model_5_pote = nlsfit(P5_pote, model = 1, start = c(6, 3, 1))
+nlsplot(P5_pote, model = 1, start = c(4,3,1), xlab = "Semana", ylab = "Semillas emergidas")
+
+
+```
+
+## Grafico modelos Gompertz
+```{r Graficos en ggplot}
+a <- model_1$Parameters[row.names(model_1$Parameters) == 'coefficient a',]
+b <- model_1$Parameters[row.names(model_1$Parameters) == 'coefficient b',]
+c <- model_1$Parameters[row.names(model_1$Parameters) == 'coefficient c',]
+
+
+model_1_plot <- ggplot(T1, aes(x=DDS, y=Semillas_germinadas)) + 
+  geom_point() +
+  stat_function(fun=function(x) a*exp(-b*exp(-c*x)), colour = "red", linetype=1)+
+  labs(title="KNO3 (5 %) durante 12 horas 
+       Modelo Gompertz",
+       x = "DDS", 
+       y = "Semillas germinadas",
+       caption = "
+coefficient a                92.17107980
+coefficient b                 5.79561063
+coefficient c                 0.24429260
+p-value t.test for a          0.03360321
+p-value t.test for b          0.01627011
+p-value t.test for c          0.03610204
+r-squared                     0.97970000
+adjusted r-squared            0.97290000
+AIC                          53.21949366
+BIC                          54.00839197")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+a1 <- model_2$Parameters[row.names(model_2$Parameters) == 'coefficient a',]
+b1 <- model_2$Parameters[row.names(model_2$Parameters) == 'coefficient b',]
+c1 <- model_2$Parameters[row.names(model_2$Parameters) == 'coefficient c',]
+
+
+model_2_plot <- ggplot(T2, aes(x=DDS, y=Semillas_germinadas)) + 
+  geom_point() +
+  stat_function(fun=function(x) a1*exp(-b1*exp(-c1*x)), colour = "red", linetype=1)+
+  labs(title="40 ∫C durante 1 hora
+       Modelo Gompertz",
+       x = "DDS", 
+       y = "Semillas germinadas",
+       caption = "
+coefficient a                86.79927628
+coefficient b                 2.62969934
+coefficient c                 0.33952453
+p-value t.test for a          0.00277366
+p-value t.test for b          0.01808807
+p-value t.test for c          0.08828498
+r-squared                     0.91900000
+adjusted r-squared            0.89200000
+AIC                          71.91441437
+BIC                          72.70331268")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+
+a2 <- model_3$Parameters[row.names(model_3$Parameters) == 'coefficient a',]
+b2 <- model_3$Parameters[row.names(model_3$Parameters) == 'coefficient b',]
+c2 <- model_3$Parameters[row.names(model_3$Parameters) == 'coefficient c',]
+
+
+model_3_plot <- ggplot(T3, aes(x=DDS, y=Semillas_germinadas)) + 
+  geom_point() +
+  stat_function(fun=function(x) a2*exp(-b2*exp(-c2*x)), colour = "red", linetype=1)+
+  labs(title="40 ∫C durante 2 horas
+       Modelo Gompertz",
+       x = "DDS", 
+       y = "Semillas germinadas",
+       caption = "
+coefficient a                59.74242079
+coefficient b                38.77196392
+coefficient c                 1.55134219
+p-value t.test for a          0.00001741
+p-value t.test for b          0.67703101
+p-value t.test for c          0.14949438
+r-squared                     0.89460000
+adjusted r-squared            0.85940000
+AIC                          72.60815299
+BIC                          73.39705129")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+a3 <- model_4$Parameters[row.names(model_4$Parameters) == 'coefficient a',]
+b3 <- model_4$Parameters[row.names(model_4$Parameters) == 'coefficient b',]
+c3 <- model_4$Parameters[row.names(model_4$Parameters) == 'coefficient c',]
+
+model_4_plot <- ggplot(T4, aes(x=DDS, y=Semillas_germinadas)) + 
+  geom_point() +
+  stat_function(fun=function(x) a3*exp(-b3*exp(-c3*x)), colour = "red", linetype=1)+
+  labs(title="4 ∫C durante 4 horas + 30 ∫C durante 4 horas
+       Modelo Gompertz",
+       x = "DDS", 
+       y = "Semillas germinadas",
+       caption = "
+coefficient a                98.32152447
+coefficient b                 2.77804005
+coefficient c                 0.20088372
+p-value t.test for a          0.18901070
+p-value t.test for b          0.00776304
+p-value t.test for c          0.25043129
+r-squared                     0.88310000
+adjusted r-squared            0.84420000
+AIC                          71.92299554
+BIC                          72.71189385")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+a4 <- model_5$Parameters[row.names(model_5$Parameters) == 'coefficient a',]
+b4 <- model_5$Parameters[row.names(model_5$Parameters) == 'coefficient b',]
+c4 <- model_5$Parameters[row.names(model_5$Parameters) == 'coefficient c',]
+
+model_5_plot <- ggplot(T5, aes(x=DDS, y=Semillas_germinadas)) + 
+  geom_point() +
+  stat_function(fun=function(x) a4*exp(-b4*exp(-c4*x)), colour = "red", linetype=1)+
+  labs(title="4 ∫C durante 8 horas + 30 ∫C durante 16 horas
+       Modelo Gompertz",
+       x = "DDS", 
+       y = "Semillas germinadas",
+       caption = "
+coefficient a                65.13569232
+coefficient b                 3.12278813
+coefficient c                 0.71694237
+p-value t.test for a          0.00000034
+p-value t.test for b          0.01915968
+p-value t.test for c          0.00633296
+r-squared                     0.96850000
+adjusted r-squared            0.95800000
+AIC                          59.42593780
+BIC                          60.21483611")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+a5 <- model_6$Parameters[row.names(model_6$Parameters) == 'coefficient a',]
+b5 <- model_6$Parameters[row.names(model_6$Parameters) == 'coefficient b',]
+c5 <- model_6$Parameters[row.names(model_6$Parameters) == 'coefficient c',]
+
+
+model_6_plot <- ggplot(T6, aes(x=DDS, y=Semillas_germinadas)) + 
+  geom_point() +
+  stat_function(fun=function(x) a5*exp(-b5*exp(-c5*x)), colour = "red", linetype=1)+
+  labs(title="40 ∫C y 60 ∫C durante 1 minuto
+       Modelo Gompertz",
+       x = "DDS", 
+       y = "Semillas germinadas",
+       caption = "
+coefficient a                71.16814636
+coefficient b                 7.80065418
+coefficient c                 1.32927198
+p-value t.test for a          0.00000015
+p-value t.test for b          0.12988649
+p-value t.test for c          0.00626325
+r-squared                     0.97110000
+adjusted r-squared            0.96150000
+AIC                          61.45163765
+BIC                          62.24053596")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+###############rizotrones juntos###########################
+a6 <- model_1_rizo$Parameters[row.names(model_1_rizo$Parameters) == 'coefficient a',]
+b6 <- model_1_rizo$Parameters[row.names(model_1_rizo$Parameters) == 'coefficient b',]
+c6 <- model_1_rizo$Parameters[row.names(model_1_rizo$Parameters) == 'coefficient c',]
+
+
+model_1_rizo_plot <- ggplot(P1, aes(x=Semana, y=porcentaje_emergencia)) + 
+  geom_point() +
+  stat_function(fun=function(x) a6*exp(-b6*exp(-c6*x)), colour = "red", linetype=1)+
+  labs(title="2 cm de profundidad
+       Modelo Gompertz",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a                  54.89017175
+coefficient b                  10.47460344
+coefficient c                   1.79644680
+p-value t.test for a            0.00000458
+p-value t.test for b            0.07387273
+p-value t.test for c            0.00419387
+r-squared                       0.99030000
+adjusted r-squared              0.98540000
+AIC                            38.63139324
+BIC                            38.41503383")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+a7 <- model_2_rizo$Parameters[row.names(model_2_rizo$Parameters) == 'coefficient a',]
+b7 <- model_2_rizo$Parameters[row.names(model_2_rizo$Parameters) == 'coefficient b',]
+c7 <- model_2_rizo$Parameters[row.names(model_2_rizo$Parameters) == 'coefficient c',]
+
+
+model_2_rizo_plot <- ggplot(P2, aes(x=Semana, y=porcentaje_emergencia)) + 
+  geom_point() +
+  stat_function(fun=function(x) a7*exp(-b7*exp(-c7*x)), colour = "red", linetype=1)+
+  labs(title="5 cm de profundidad
+       Modelo Gompertz",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a                  19.02500734
+coefficient b                  58.45098734
+coefficient c                   2.33419101
+p-value t.test for a            0.00000000
+p-value t.test for b            0.00127474
+p-value t.test for c            0.00000299
+r-squared                       1.00000000
+adjusted r-squared              1.00000000
+AIC                           -16.62425304
+BIC                           -16.84061244")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+a8 <- model_3_rizo$Parameters[row.names(model_3_rizo$Parameters) == 'coefficient a',]
+b8 <- model_3_rizo$Parameters[row.names(model_3_rizo$Parameters) == 'coefficient b',]
+#c7 <- model_2_rizo$Parameters[row.names(model_2_rizo$Parameters) == 'coefficient c',]
+
+
+model_3_rizo_plot <- ggplot(P3, aes(x=Semana, y=porcentaje_emergencia)) + 
+  geom_point() +
+  stat_function(fun=function(x) a8 + (b8*x), colour = "red", linetype=1)+
+  labs(title="10 cm de profundidad
+       Modelo Lineal",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a                  -0.42857143
+coefficient b                   0.42857143
+p-value t.test for a            0.33182682
+p-value t.test for b            0.01172481
+r-squared                       0.75000000
+adjusted r-squared              0.70000000
+AIC                            16.01674393
+BIC                            15.85447437")+
+             
+scale_y_continuous(limits = c(0,5),
+breaks = c(seq(0,5,2.5)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+###########################modelos potes#################################
+a9 <- model_1_pote$Parameters[row.names(model_1_pote$Parameters) == 'coefficient a',]
+b9 <- model_1_pote$Parameters[row.names(model_1_pote$Parameters) == 'coefficient b',]
+c9 <- model_1_pote$Parameters[row.names(model_1_pote$Parameters) == 'coefficient c',]
+
+model_1_pote_plot <- ggplot(P1_pote, aes(x=Semana, y=`Semillas emergidas`)) + 
+  geom_point() +
+  stat_function(fun=function(x) a9*exp(-b9*exp(-c9*x)), colour = "red", linetype=1)+
+  labs(title="0 cm de profundidad
+       Modelo Gompertz",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a               64.41275297
+coefficient b                4.75068154
+coefficient c                1.56411241
+p-value t.test for a         0.00000032
+p-value t.test for b         0.00041521
+p-value t.test for c         0.00007614
+r-squared                    0.99980000
+adjusted r-squared           0.99970000
+AIC                         11.77847999
+BIC                         10.94551787")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+a10 <- model_2_pote$Parameters[row.names(model_2_pote$Parameters) == 'coefficient a',]
+b10 <- model_2_pote$Parameters[row.names(model_2_pote$Parameters) == 'coefficient b',]
+c10 <- model_2_pote$Parameters[row.names(model_2_pote$Parameters) == 'coefficient c',]
+
+model_2_pote_plot <- ggplot(P2_pote, aes(x=Semana, y=`Semillas emergidas`)) + 
+  geom_point() +
+  stat_function(fun=function(x) a10*exp(-b10*exp(-c10*x)), colour = "red", linetype=1)+
+  labs(title="2 cm de profundidad
+       Modelo Gompertz",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a               72.17575579
+coefficient b               16.00513953
+coefficient c                2.23336785
+p-value t.test for a         0.00000001
+p-value t.test for b         0.00002544
+p-value t.test for c         0.00000134
+r-squared                    1.00000000
+adjusted r-squared           1.00000000
+AIC                         -0.63826813
+BIC                         -1.47123025")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+a11 <- model_3_pote$Parameters[row.names(model_3_pote$Parameters) == 'coefficient a',]
+b11 <- model_3_pote$Parameters[row.names(model_3_pote$Parameters) == 'coefficient b',]
+c11 <- model_3_pote$Parameters[row.names(model_3_pote$Parameters) == 'coefficient c',]
+
+model_3_pote_plot <- ggplot(P3_pote, aes(x=Semana, y=`Semillas emergidas`)) + 
+  geom_point() +
+  stat_function(fun=function(x) a11*exp(-b11*exp(-c11*x)), colour = "red", linetype=1)+
+  labs(title="4 cm de profundidad
+       Modelo Gompertz",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a               18.01037022
+coefficient b             7255.38528167
+coefficient c                3.91394509
+p-value t.test for a         0.00000000
+p-value t.test for b         0.00002447
+p-value t.test for c         0.00000005
+r-squared                    1.00000000
+adjusted r-squared           1.00000000
+AIC                        -36.62735752
+BIC                        -37.46031965")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+a12 <- model_4_pote$Parameters[row.names(model_4_pote$Parameters) == 'coefficient a',]
+b12 <- model_4_pote$Parameters[row.names(model_4_pote$Parameters) == 'coefficient b',]
+c12 <- model_4_pote$Parameters[row.names(model_4_pote$Parameters) == 'coefficient c',]
+
+model_4_pote_plot <- ggplot(P4_pote, aes(x=Semana, y=`Semillas emergidas`)) + 
+  geom_point() +
+  stat_function(fun=function(x) a12*exp(-b12*exp(-c12*x)), colour = "red", linetype=1)+
+  labs(title="6 cm de profundidad
+       Modelo Gompertz",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a               18.03302730
+coefficient b              245.45114165
+coefficient c                2.77912784
+p-value t.test for a         0.00000000
+p-value t.test for b         0.00056613
+p-value t.test for c         0.00000336
+r-squared                    1.00000000
+adjusted r-squared           1.00000000
+AIC                        -23.25877274
+BIC                        -24.09173486")+
+             
+scale_y_continuous(limits = c(0,100),
+breaks = c(seq(0,100,20)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+a13 <- model_5_pote$Parameters[row.names(model_5_pote$Parameters) == 'coefficient a',]
+b13 <- model_5_pote$Parameters[row.names(model_5_pote$Parameters) == 'coefficient b',]
+#c7 <- model_2_rizo$Parameters[row.names(model_2_rizo$Parameters) == 'coefficient c',]
+
+
+model_5_pote_plot <- ggplot(P5_pote, aes(x=Semana, y=`Semillas emergidas`)) + 
+  geom_point() +
+  stat_function(fun=function(x) a13 + (b13*x), colour = "red", linetype=1)+
+  labs(title="8 cm de profundidad
+       Modelo Lineal",
+       x = "Semana", 
+       y = "Semillas emergidas (%)",
+       caption = "
+coefficient a               -1.04761905
+coefficient b                1.48571429
+p-value t.test for a         0.32616423
+p-value t.test for b         0.00864457
+r-squared                    0.85210000
+adjusted r-squared           0.81510000
+AIC                         23.69361362
+BIC                         23.06889203")+
+             
+scale_y_continuous(limits = c(0,10),
+breaks = c(seq(0,10,2.5)))+
+            
+  theme_bw() +
+            theme(axis.text.x = element_text(colour = "black"),
+            axis.text.y = element_text(colour = "black"),
+            axis.line = element_line(color = "black"),
+            legend.position = "bottom", 
+            plot.title = element_text(hjust = 0.5, size = 11.5),
+            axis.title.y = element_text(size = 12),
+            axis.title.x = element_text(size = 12), 
+            strip.text.x  = element_text(size = 12),
+            panel.grid.major = element_blank(),
+            text = element_text(size = 14))
+
+
+```
+

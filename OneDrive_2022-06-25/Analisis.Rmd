@@ -1,0 +1,190 @@
+---
+title: "Analisis estadístico"
+author: "Toño_A_gangetica"
+date: '2022-06-27'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analísis en Dormancia
+
+```{r Cargado de datos y area bajo la curva (ABCG)}
+library(pacman)
+p_load(readxl, tidyverse,agricolae)
+#file.choose()
+#Cargado de los datos crudos
+ruta_1 <- "D:\\OneDrive_2022-06-25\\1. Curso_Investigación\\R_analysis\\dormancia.xlsx"
+data_dor <- lapply(excel_sheets(ruta_1), read_excel, path = ruta_1)
+data_dor <- data_dor[[2]]
+data_dor$Semillas.germinadas <- as.numeric(data_dor$Semillas.germinadas)
+
+#Definición del tipo de dato 
+data_dor <-
+    data_dor %>%
+    mutate(Tratamiento = factor(Tratamiento), 
+           Replica = factor(Replica))
+
+#Agrupamiento por tratamiento y por replica
+abcg_data <-
+    data_dor %>%
+      group_by(Tratamiento, Replica) %>%
+        summarise(ABCG = audpc(Semillas.germinadas,DDS)%>% round(0))
+
+abcg_data
+#Realizar el modelo lineal para ver si hay diferencias entre tratamientos
+lin_mod<-lm(ABCG~Tratamiento + Replica, data = abcg_data)
+summary(lin_mod) #Hay diferencias entre tratamientos
+
+#Realización del ANOVA
+model<-aov(lin_mod)
+LSD_dor <- print(LSD.test(model,"Tratamiento"))  
+
+#output de fisher
+plot(LSD.test(model,"Tratamiento"), xlab = "Tratamientos", ylab = "Promedio ABCG", main = "") #i
+
+```
+
+```{r Representación gráfica de los acumulados con el área bajo la curva de germinación}
+library(pacman)
+p_load(readxl, tidyverse,agricolae)
+#file.choose()
+#Cargado de los datos crudos
+ruta_1 <- "D:\\OneDrive_2022-06-25\\1. Curso_Investigación\\R_analysis\\dormancia.xlsx"
+data_dor <- lapply(excel_sheets(ruta_1), read_excel, path = ruta_1)
+data_dor <- data_dor[[1]]
+data_dor$Acumulado <- as.numeric(data_dor$Acumulado) 
+
+
+data_dor <-
+    data_dor %>%
+    mutate(Tratamiento = factor(Tratamiento), 
+           DDS = as.numeric(DDS),
+           Acumulado = ((Acumulado/50)*100))
+
+windowsFonts(A = windowsFont("Arial"))
+
+plot <- data_dor %>% 
+ ggplot(aes(x= DDS, y= Acumulado)) + 
+  geom_point(size = 3) +
+  geom_line() +
+     scale_x_continuous(limits = c(0, 10), breaks = seq(0,10,1))+
+      scale_y_continuous(limits = c(0, 100))+
+      labs(x = "Tiempo (DDS)" , y = "Germinación acumulada (%)" )+
+         facet_wrap(~Tratamiento,
+             labeller = labeller(
+               Tratamiento = c("T1" = "KNO3 (5 %) durante 12 horas",
+                          "T2" = "40 °C durante 1 hora",
+                          "T3" = "40 °C durante 2 hora",
+                          "T4" = "4 °C durante 4 horas + 30 °C durante 4 horas",
+                          "T5" = "4 °C durante 8 horas + 30 °C durante 16 horas", 
+                          "T6" = "40 °C y 60 °C durante 1 minuto")))+
+                          theme_classic() +
+              theme(axis.text.x = element_text(colour = "black", family = "A"),
+                  axis.text.y = element_text(colour = "black", family = "A"),
+                  #axis.text.x = element_text(colour = "black", family = "A", size = 14),
+                  axis.line = element_line(color = "black"),
+                  legend.position = "none", 
+                  plot.title = element_text(hjust = 0.5, size = 14.5),
+                  axis.title.y = element_text(size = 17),
+                  axis.title.x = element_text(size = 17), 
+                  strip.text.x  = element_text(size = 17, family = "A"),
+                  #strip.background = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.grid.major = element_blank(),
+                  text = element_text(size = 23, family = "A", colour = "black"))
+
+    f_labels <- data.frame(Tratamiento = c("T1", "T2", "T3", "T4", "T5", "T6"), 
+                          label = c("ABCG = 23 n°semillas*dias",
+                                       "ABCG = 62  n°semillas*dias",
+                                       "ABCG = 48  n°semillas*dias",
+                                       "ABCG = 46  n°semillas*dias",
+                                       "ABCG = 64  n°semillas*dias", 
+                                       "ABCG = 76  n°semillas*dias"))
+  
+  ABCG_plot<- plot + geom_text(x = 6, y = 90, aes(label = label), data= f_labels, size = 6)
+  ggsave("plot_0.png", plot = ABCG_plot, width = 40, height = 29, units = c("cm"), dpi = 500)
+
+
+
+```
+
+## Análisis en Rhizotrones
+
+```{r Cargado de datos y area bajo la curva (ABCG)}
+#file.choose()
+library(pacman)
+p_load(readxl,tidyverse, agricolae)
+
+ruta <- "D:\\OneDrive_2022-06-25\\1. Curso_Investigación\\R_analysis\\Raw_rizotrones.csv"
+rizo_tron<-read.csv(file = ruta, sep = ",", header = TRUE)
+
+rizo_tron <-
+    rizo_tron %>%
+    mutate(Profundidad = factor(Profundidad), 
+           Bloque = factor(Bloque),
+           Experimento = factor(Experimento))
+
+#Aplicar el area bajo la curva
+ABCG_ri <-
+    rizo_tron %>%
+      group_by(Profundidad, Experimento) %>%
+        summarise(ABCG_riz = audpc(Plantas.emergidas,Semana)%>% round(0))
+ABCG_ri
+
+model_bloque = lm(ABCG_riz~ Experimento, data = ABCG_ri)
+a <- anova(model_bloque)
+summary(a)
+plot(a)  #No hay diferencias significativas entre exprimentos por lo que se usará
+        #un mismo set de datos
+
+rizotron_x2<-select(rizo_tron, -Experimento)
+rizotron_x2 <-
+    rizo_tron %>%
+    mutate(Profundidad = factor(Profundidad), 
+           Bloque = factor(Bloque))
+
+ABCG_rizo <-
+    rizotron_x2 %>%
+      group_by(Profundidad, Bloque) %>%
+        summarise(ABCG_rizo = audpc(Plantas.emergidas,Semana)%>% round(0))
+
+lin_mod_rizo<-lm(ABCG_rizo~Profundidad + Bloque, data = ABCG_rizo)
+rizo_model <- aov(lin_mod_rizo)
+LSD_rizo <- print(LSD.test(rizo_model,"Profundidad"))  
+plot(LSD.test(rizo_model,"Profundidad"), xlab = "Profundidad", ylab = "Promedio ABCG", main = "")
+
+```
+
+```{r Representación gráfica}
+#file.choose()
+library(pacman)
+p_load(readxl,tidyverse, agricolae)
+ruta_2 <- "D:\\OneDrive_2022-06-25\\1. Curso_Investigación\\R_analysis\\data_base_agrup.csv"
+acumulado_rizo <- read.csv(ruta_2, sep = ",", header = TRUE)
+
+  plot_rizo <- acumulado_rizo %>% 
+  ggplot(aes(x=Semana, y=porcentaje_emergencia, group=Profundidad, shape=Profundidad)) + 
+  geom_point(aes(y=porcentaje_emergencia),size=3) +
+  geom_line() +
+  labs(x="Tiempo (Semana)", y="Acumulado de semillas germinadas (%)") +
+  scale_y_continuous(limits = c(0,100)) +
+  theme_classic() +
+  theme(legend.position = c(0.35, 0.9),legend.title = element_blank(),
+        axis.text.x = element_text(colour = "black", family = "A"),
+                  axis.text.y = element_text(colour = "black", family = "A"),
+                  #axis.text.x = element_text(colour = "black", family = "A", size = 14),
+                  axis.line = element_line(color = "black"),
+                  plot.title = element_text(hjust = 0.5, size = 14.5),
+                  axis.title.y = element_text(size = 17),
+                  axis.title.x = element_text(size = 17), 
+                  strip.text.x  = element_text(size = 17, family = "A"),
+                  #strip.background = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  panel.grid.major = element_blank(),
+                  text = element_text(size = 23, family = "A", colour = "black")) 
+  ggsave("Acumulado.png", plot = plot_rizo, width = 40, height = 29, units = c("cm"), dpi = 500)
+```
+
